@@ -1,0 +1,11 @@
+# Core dependencies untuk preprocessing
+pandas==2.2.3
+numpy==2.2.6
+
+# Untuk visualisasi di notebook
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Jupyter untuk menjalankan notebook
+jupyter>=1.0.0
+ipykernel>=6.20.0
