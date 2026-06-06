@@ -1,6 +1,4 @@
 # Otomatisasi preprocessing untuk Wine Quality (White Wine) dataset.
-# Tujuan kode ini untuk mengubah CSV mentah menjadi data siap latih: semua kolom numerik, tanpa nilai hilang, dan targetnya dibinarisasi (quality >= 6 = good, < 6 = bad).
-
 from __future__ import annotations
 
 import os
@@ -11,15 +9,12 @@ from typing import Final, Union
 import numpy as np
 import pandas as pd
 
-# Nama dataset -> nama file artefak raw & hasil preprocessing.
 DATASET_NAME: Final[str] = "wine-quality-white"
 RAW_DATASET_NAME: Final[str] = f"{DATASET_NAME}_raw"
 PROCESSED_DATASET_NAME: Final[str] = f"{DATASET_NAME}_preprocessing"
 
-# Kolom target (label biner kualitas wine: good vs bad).
 TARGET_COLUMN: Final[str] = "quality"
 
-# Dataset Raw dibaca dari root repo, hasilnya ditulis di folder preprocessing ini.
 _HERE: Final[Path] = Path(__file__).resolve().parent
 _REPO_ROOT: Final[Path] = _HERE.parent
 DEFAULT_RAW_PATH: Final[Path] = _REPO_ROOT / f"{RAW_DATASET_NAME}.csv"
@@ -36,23 +31,19 @@ def _transform(df: pd.DataFrame) -> pd.DataFrame:
     """Kembalikan salinan df yang siap latih: semua numerik, tanpa nilai hilang, target biner."""
     out = df.copy()
 
-    # Pastikan semua kolom numerik (konversi ke numerik bila perlu).
     for col in out.columns:
         out[col] = pd.to_numeric(out[col], errors="coerce")
 
-    # Binarisasi target: quality >= 6 -> 1 (good), < 6 -> 0 (bad).
     if TARGET_COLUMN in out.columns:
         out[TARGET_COLUMN] = (out[TARGET_COLUMN].fillna(0) >= 6).astype(int)
 
-    # Imputasi median untuk sisa nilai hilang pada kolom fitur.
     feature_cols = [c for c in out.columns if c != TARGET_COLUMN]
     for col in feature_cols:
         median = out[col].median()
         if pd.isna(median):
-            median = 0.0  # kolom kosong total: jaga invarian tanpa-NaN
+            median = 0.0  
         out[col] = out[col].fillna(median)
 
-    # Buang baris duplikat, lalu pastikan semua kolomnya numerik.
     out = out.drop_duplicates().reset_index(drop=True)
     out = out.apply(pd.to_numeric)
 
@@ -86,9 +77,8 @@ def _write_processed(df: pd.DataFrame, path: Union[str, "os.PathLike[str]"]) -> 
     tmp_path = Path(tmp_name)
     try:
         df.to_csv(tmp_path, index=False)
-        os.replace(tmp_path, target)  # rename atomik ke lokasi final
+        os.replace(tmp_path, target)
     except Exception as exc:
-        # Jangan tinggalkan output parsial, jadi hapus file sementara dulu.
         if tmp_path.exists():
             tmp_path.unlink()
         raise PreprocessingError(
