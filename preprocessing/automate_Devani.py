@@ -1,4 +1,4 @@
-# Skrip otomatisasi preprocessing dataset Wine Quality (White Wine).
+# Skrip otomatisasi preprocessing dataset Breast Cancer Wisconsin (Diagnostic).
 # Menyediakan fungsi siap-pakai untuk membaca data mentah, membersihkannya,
 # dan menyimpan hasil yang siap dilatih.
 from __future__ import annotations
@@ -11,13 +11,14 @@ from typing import Final, Union
 import numpy as np
 import pandas as pd
 
+
 # Konstanta & konfigurasi path
 
-DATASET_NAME: Final[str] = "wine-quality-white"
+DATASET_NAME: Final[str] = "breast-cancer"
 RAW_DATASET_NAME: Final[str] = f"{DATASET_NAME}_raw"
 PROCESSED_DATASET_NAME: Final[str] = f"{DATASET_NAME}_preprocessing"
 
-TARGET_COLUMN: Final[str] = "quality"
+TARGET_COLUMN: Final[str] = "target"
 
 _HERE: Final[Path] = Path(__file__).resolve().parent
 _REPO_ROOT: Final[Path] = _HERE.parent
@@ -31,7 +32,8 @@ class PreprocessingError(RuntimeError):
     """Kesalahan ketika data mentah gagal dibaca atau hasil gagal disimpan."""
 
 
-# Langkah-langkah transformasi
+# Langkah-langkah transformasi (dipecah agar tiap tahap mudah dibaca)
+
 def _coerce_numeric(df: pd.DataFrame) -> pd.DataFrame:
     """Paksa seluruh kolom menjadi numerik; nilai tak valid menjadi NaN."""
     for col in df.columns:
@@ -39,10 +41,10 @@ def _coerce_numeric(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def _binarize_target(df: pd.DataFrame) -> pd.DataFrame:
-    """Ubah target jadi label biner: 1 bila quality >= 6, selain itu 0."""
+def _normalize_target(df: pd.DataFrame) -> pd.DataFrame:
+    """Pastikan target bertipe integer biner (0 = malignant, 1 = benign)."""
     if TARGET_COLUMN in df.columns:
-        df[TARGET_COLUMN] = (df[TARGET_COLUMN].fillna(0) >= 6).astype(int)
+        df[TARGET_COLUMN] = df[TARGET_COLUMN].fillna(0).round().astype(int)
     return df
 
 
@@ -63,30 +65,30 @@ def _drop_duplicate_rows(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def clean_dataset(df: pd.DataFrame) -> pd.DataFrame:
-    """Hasilkan salinan df yang siap dilatih: seluruh kolom numerik, tanpa nilai hilang, dan target sudah biner.
+    """Hasilkan salinan df yang siap dilatih: seluruh kolom numerik, tanpa nilai hilang, dan target biner.
 
     Urutan tahap (penting, menentukan hasil akhir):
       1. konversi numerik
-      2. binarisasi target
+      2. normalisasi target ke integer biner
       3. imputasi median pada fitur
       4. buang duplikat & reset indeks
       5. pastikan kembali seluruh kolom numerik
     """
     out = df.copy()
     out = _coerce_numeric(out)
-    out = _binarize_target(out)
+    out = _normalize_target(out)
     out = _impute_median(out)
     out = _drop_duplicate_rows(out)
     out = out.apply(pd.to_numeric)
     return out
 
 
-# Baca / tulis data
+# Baca / tulis berkas
 
 def load_dataset(path: Union[str, "os.PathLike[str]"]) -> pd.DataFrame:
-    """Baca berkas CSV mentah (pemisah titik-koma, dengan baris header)."""
+    """Baca berkas CSV mentah (pemisah koma, dengan baris header)."""
     try:
-        return pd.read_csv(path, sep=";")
+        return pd.read_csv(path, sep=",")
     except Exception as exc:
         raise PreprocessingError(
             f"Tidak dapat membaca dataset mentah dari {os.fspath(path)!r}: {exc}"

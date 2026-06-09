@@ -1,9 +1,9 @@
-name: Wine Quality Preprocessing
+name: Breast Cancer Preprocessing
 
 on:
   push:
     paths:
-      - 'wine-quality-white_raw.csv'
+      - 'breast-cancer_raw.csv'
       - 'preprocessing/automate_Devani.py'
       - '.github/workflows/preprocessing.yml'
   workflow_dispatch:
@@ -35,8 +35,8 @@ jobs:
       - name: Upload preprocessing artifact
         uses: actions/upload-artifact@v5
         with:
-          name: wine-quality-white_preprocessing
-          path: preprocessing/wine-quality-white_preprocessing.csv
+          name: breast-cancer_preprocessing
+          path: preprocessing/breast-cancer_preprocessing.csv
           retention-days: 30
       
       - name: Commit processed dataset
@@ -44,8 +44,8 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          if [ -f preprocessing/wine-quality-white_preprocessing.csv ]; then
-            git add preprocessing/wine-quality-white_preprocessing.csv
+          if [ -f preprocessing/breast-cancer_preprocessing.csv ]; then
+            git add preprocessing/breast-cancer_preprocessing.csv
             
             if git diff --staged --quiet; then
               echo "No changes to commit"

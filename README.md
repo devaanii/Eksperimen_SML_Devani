@@ -1,29 +1,31 @@
-# Eksperimen SML Devani - Wine Quality Dataset
+# Eksperimen SML Devani - Breast Cancer Wisconsin Dataset
 
 Repository untuk submission **Membangun Sistem Machine Learning** - Kriteria 1 (Eksperimen & Preprocessing)
 
 ## Dataset
 
-**Wine Quality (White Wine)** dari UCI Machine Learning Repository
-- **Sumber**: [UCI ML Repository](https://archive.ics.uci.edu/ml/datasets/wine+quality)
-- **Ukuran**: 4,898 baris × 12 kolom (11 fitur + 1 target)
-- **Format**: CSV dengan delimiter semicolon (`;`), ada header
-- **Target**: `quality` (skor 0-10, dibinarisasi menjadi 0/1)
+**Breast Cancer Wisconsin (Diagnostic)** dari UCI Machine Learning Repository
+- **Sumber**: [UCI ML Repository](https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic) (juga tersedia via scikit-learn)
+- **Ukuran**: 569 baris × 31 kolom (30 fitur + 1 target)
+- **Format**: CSV dengan delimiter koma (`,`), ada header
+- **Target**: `target` (biner: 0 = malignant/ganas, 1 = benign/jinak)
 
 ### Fitur Dataset
 
-1. **fixed acidity**: Asam tetap
-2. **volatile acidity**: Asam volatil
-3. **citric acid**: Asam sitrat
-4. **residual sugar**: Gula sisa
-5. **chlorides**: Klorida
-6. **free sulfur dioxide**: Sulfur dioksida bebas
-7. **total sulfur dioxide**: Total sulfur dioksida
-8. **density**: Densitas
-9. **pH**: Tingkat keasaman
-10. **sulphates**: Sulfat
-11. **alcohol**: Kadar alkohol
-12. **quality**: Kualitas wine (target)
+Dataset memuat 30 fitur numerik hasil pengukuran citra digital inti sel. Untuk setiap dari 10 karakteristik berikut tersedia nilai **mean**, **standard error**, dan **worst** (rata-rata tiga nilai terbesar):
+
+1. **radius**: jarak dari pusat ke titik pada keliling
+2. **texture**: standar deviasi nilai grayscale
+3. **perimeter**: keliling inti sel
+4. **area**: luas inti sel
+5. **smoothness**: variasi lokal panjang radius
+6. **compactness**: (perimeter² / area) − 1
+7. **concavity**: tingkat kecekungan kontur
+8. **concave points**: jumlah bagian cekung kontur
+9. **symmetry**: simetri inti sel
+10. **fractal dimension**: aproksimasi "coastline" − 1
+
+Kolom `target` adalah label diagnosis (0 = malignant, 1 = benign).
 
 ## Struktur Repository
 
@@ -35,8 +37,8 @@ Eksperimen_SML_Devani/
 ├── preprocessing/
 │   ├── automate_Devani.py             # Script preprocessing otomatis
 │   ├── Eksperimen_Devani.ipynb        # Notebook EDA & preprocessing
-│   └── wine-quality-white_preprocessing.csv  # Dataset hasil
-├── wine-quality-white_raw.csv         # Dataset mentah
+│   └── breast-cancer_preprocessing.csv  # Dataset hasil
+├── breast-cancer_raw.csv              # Dataset mentah
 ├── .gitignore
 └── README.md
 ```
@@ -45,23 +47,21 @@ Eksperimen_SML_Devani/
 
 ### Langkah-langkah:
 
-1. **Data Loading**: Baca CSV dengan delimiter semicolon
+1. **Data Loading**: Baca CSV dengan delimiter koma
 2. **Validasi Numerik**: Pastikan semua kolom numerik
-3. **Binarisasi Target**: 
-   - `quality >= 6` → 1 (good wine)
-   - `quality < 6` → 0 (bad wine)
+3. **Normalisasi Target**: Pastikan target bertipe integer biner (0 = malignant, 1 = benign)
 4. **Handling Missing Values**: Imputasi median (jika ada)
 5. **Drop Duplicates**: Hapus baris duplikat
 6. **Output**: Dataset bersih siap untuk modelling
 
 ### Hasil Preprocessing
 
-- **Baris awal**: 4,898
-- **Baris setelah preprocessing**: ~3,961 (setelah drop duplikat)
+- **Baris**: 569 (tidak ada duplikat)
+- **Kolom**: 31 (30 fitur + 1 target)
 - **Missing values**: 0
-- **Target balance**: 
-  - Good (1): ~2,613 (66%)
-  - Bad (0): ~1,348 (34%)
+- **Komposisi target**:
+  - Benign (1)    : 357 (~62.7%)
+  - Malignant (0) : 212 (~37.3%)
 
 ## Cara Penggunaan
 
@@ -83,7 +83,7 @@ Buka `preprocessing/Eksperimen_Devani.ipynb` untuk:
 ### 3. Automated - GitHub Actions
 
 Workflow CI akan otomatis berjalan ketika:
-- Ada perubahan pada `wine-quality-white_raw.csv`
+- Ada perubahan pada `breast-cancer_raw.csv`
 - Ada perubahan pada `preprocessing/automate_Devani.py`
 - Ada perubahan pada workflow file
 - Trigger manual via workflow_dispatch
@@ -101,6 +101,7 @@ pandas==2.2.3
 numpy==2.2.6
 matplotlib>=3.7.0
 seaborn>=0.12.0
+scikit-learn>=1.5.0
 ```
 
 ## Author
