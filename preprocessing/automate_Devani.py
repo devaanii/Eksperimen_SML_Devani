@@ -1,4 +1,6 @@
-# Otomatisasi preprocessing untuk Wine Quality (White Wine) dataset.
+# Skrip otomatisasi preprocessing dataset Wine Quality (White Wine).
+# Menyediakan fungsi siap-pakai untuk membaca data mentah, membersihkannya,
+# dan menyimpan hasil yang siap dilatih.
 from __future__ import annotations
 
 import os
@@ -8,6 +10,8 @@ from typing import Final, Union
 
 import numpy as np
 import pandas as pd
+
+# Konstanta & konfigurasi path
 
 DATASET_NAME: Final[str] = "wine-quality-white"
 RAW_DATASET_NAME: Final[str] = f"{DATASET_NAME}_raw"
@@ -24,50 +28,79 @@ RawInput = Union[str, "os.PathLike[str]", pd.DataFrame]
 
 
 class PreprocessingError(RuntimeError):
-    """Galat saat data mentah gagal dibaca atau hasil gagal ditulis."""
+    """Kesalahan ketika data mentah gagal dibaca atau hasil gagal disimpan."""
 
 
-def _transform(df: pd.DataFrame) -> pd.DataFrame:
-    """Kembalikan salinan df yang siap latih: semua numerik, tanpa nilai hilang, target biner."""
-    out = df.copy()
+# Langkah-langkah transformasi
+def _coerce_numeric(df: pd.DataFrame) -> pd.DataFrame:
+    """Paksa seluruh kolom menjadi numerik; nilai tak valid menjadi NaN."""
+    for col in df.columns:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    return df
 
-    for col in out.columns:
-        out[col] = pd.to_numeric(out[col], errors="coerce")
 
-    if TARGET_COLUMN in out.columns:
-        out[TARGET_COLUMN] = (out[TARGET_COLUMN].fillna(0) >= 6).astype(int)
+def _binarize_target(df: pd.DataFrame) -> pd.DataFrame:
+    """Ubah target jadi label biner: 1 bila quality >= 6, selain itu 0."""
+    if TARGET_COLUMN in df.columns:
+        df[TARGET_COLUMN] = (df[TARGET_COLUMN].fillna(0) >= 6).astype(int)
+    return df
 
-    feature_cols = [c for c in out.columns if c != TARGET_COLUMN]
+
+def _impute_median(df: pd.DataFrame) -> pd.DataFrame:
+    """Isi nilai hilang tiap fitur dengan median kolom yang bersangkutan."""
+    feature_cols = [c for c in df.columns if c != TARGET_COLUMN]
     for col in feature_cols:
-        median = out[col].median()
+        median = df[col].median()
         if pd.isna(median):
-            median = 0.0  
-        out[col] = out[col].fillna(median)
+            median = 0.0
+        df[col] = df[col].fillna(median)
+    return df
 
-    out = out.drop_duplicates().reset_index(drop=True)
+
+def _drop_duplicate_rows(df: pd.DataFrame) -> pd.DataFrame:
+    """Buang baris duplikat lalu susun ulang indeks dari nol."""
+    return df.drop_duplicates().reset_index(drop=True)
+
+
+def clean_dataset(df: pd.DataFrame) -> pd.DataFrame:
+    """Hasilkan salinan df yang siap dilatih: seluruh kolom numerik, tanpa nilai hilang, dan target sudah biner.
+
+    Urutan tahap (penting, menentukan hasil akhir):
+      1. konversi numerik
+      2. binarisasi target
+      3. imputasi median pada fitur
+      4. buang duplikat & reset indeks
+      5. pastikan kembali seluruh kolom numerik
+    """
+    out = df.copy()
+    out = _coerce_numeric(out)
+    out = _binarize_target(out)
+    out = _impute_median(out)
+    out = _drop_duplicate_rows(out)
     out = out.apply(pd.to_numeric)
-
     return out
 
 
-def _read_raw(path: Union[str, "os.PathLike[str]"]) -> pd.DataFrame:
-    """Baca CSV mentah dengan delimiter semicolon dan header."""
+# Baca / tulis data
+
+def load_dataset(path: Union[str, "os.PathLike[str]"]) -> pd.DataFrame:
+    """Baca berkas CSV mentah (pemisah titik-koma, dengan baris header)."""
     try:
         return pd.read_csv(path, sep=";")
     except Exception as exc:
         raise PreprocessingError(
-            f"could not read raw dataset from {os.fspath(path)!r}: {exc}"
+            f"Tidak dapat membaca dataset mentah dari {os.fspath(path)!r}: {exc}"
         ) from exc
 
 
-def _write_processed(df: pd.DataFrame, path: Union[str, "os.PathLike[str]"]) -> Path:
-    """Tulis df ke path secara atomik (file sementara lalu rename)."""
+def save_dataset(df: pd.DataFrame, path: Union[str, "os.PathLike[str]"]) -> Path:
+    """Simpan df ke path secara aman (tulis ke berkas sementara lalu ganti nama)."""
     target = Path(path)
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
     except Exception as exc:
         raise PreprocessingError(
-            f"could not prepare output directory for {os.fspath(path)!r}: {exc}"
+            f"Gagal membuat folder tujuan untuk {os.fspath(path)!r}: {exc}"
         ) from exc
 
     tmp_fd, tmp_name = tempfile.mkstemp(
@@ -82,7 +115,7 @@ def _write_processed(df: pd.DataFrame, path: Union[str, "os.PathLike[str]"]) -> 
         if tmp_path.exists():
             tmp_path.unlink()
         raise PreprocessingError(
-            f"could not write processed dataset to {os.fspath(path)!r}: {exc}"
+            f"Gagal menyimpan dataset hasil preprocessing ke {os.fspath(path)!r}: {exc}"
         ) from exc
     return target
 
@@ -91,38 +124,42 @@ def preprocess_dataset(
     raw_input: RawInput,
     output_path: Union[str, "os.PathLike[str]", None] = None,
 ) -> pd.DataFrame:
-    """Muat data mentah, transformasikan, opsional simpan, lalu kembalikan."""
-    raw = raw_input if isinstance(raw_input, pd.DataFrame) else _read_raw(raw_input)
+    """Muat data mentah, terapkan transformasi, simpan bila diminta, lalu kembalikan hasilnya."""
+    raw = raw_input if isinstance(raw_input, pd.DataFrame) else load_dataset(raw_input)
 
-    processed = _transform(raw)
+    processed = clean_dataset(raw)
 
     if output_path is not None:
-        _write_processed(processed, output_path)
+        save_dataset(processed, output_path)
 
     return processed
 
 
-def main(
-    raw_path: Union[str, "os.PathLike[str]"] = DEFAULT_RAW_PATH,
-    output_path: Union[str, "os.PathLike[str]"] = DEFAULT_OUTPUT_PATH,
-) -> pd.DataFrame:
-    """Baca CSV mentah, tulis hasil preprocessing, dan cetak ringkasan singkat."""
-    processed = preprocess_dataset(raw_path, output_path)
-
+def _print_summary(processed: pd.DataFrame, raw_path, output_path) -> None:
+    """Cetak ringkasan singkat hasil preprocessing ke konsol."""
     missing_total = int(processed.isna().sum().sum())
     non_numeric = [
         col
         for col in processed.columns
         if not pd.api.types.is_numeric_dtype(processed[col])
     ]
-    print(f"Read raw dataset : {os.fspath(raw_path)}")
-    print(f"Wrote processed  : {os.fspath(output_path)}")
-    print(f"Shape            : {processed.shape[0]} rows x {processed.shape[1]} cols")
-    print(f"Missing values   : {missing_total}")
-    print(f"Non-numeric cols : {non_numeric if non_numeric else 'none'}")
+    print(f"Berkas mentah        : {os.fspath(raw_path)}")
+    print(f"Hasil disimpan ke    : {os.fspath(output_path)}")
+    print(f"Dimensi akhir        : {processed.shape[0]} baris x {processed.shape[1]} kolom")
+    print(f"Sisa nilai hilang    : {missing_total}")
+    print(f"Kolom non-numerik    : {non_numeric if non_numeric else 'tidak ada'}")
     if TARGET_COLUMN in processed.columns:
         counts = processed[TARGET_COLUMN].value_counts().to_dict()
-        print(f"Target balance   : {counts}")
+        print(f"Komposisi target     : {counts}")
+
+
+def main(
+    raw_path: Union[str, "os.PathLike[str]"] = DEFAULT_RAW_PATH,
+    output_path: Union[str, "os.PathLike[str]"] = DEFAULT_OUTPUT_PATH,
+) -> pd.DataFrame:
+    """Jalankan pipeline penuh: baca data mentah, simpan hasil olahan, cetak ringkasannya."""
+    processed = preprocess_dataset(raw_path, output_path)
+    _print_summary(processed, raw_path, output_path)
     return processed
 
 
