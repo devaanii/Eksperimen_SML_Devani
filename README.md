@@ -103,23 +103,8 @@ matplotlib>=3.7.0
 seaborn>=0.12.0
 ```
 
-## Target Kriteria
-
-✅ **Advance (4 poin)**
-- Script preprocessing self-contained dan mandiri
-- GitHub Actions workflow berjalan sukses
-- Dataset hasil preprocessing ter-track di git
-- Artifact preprocessing ter-upload
-- Dokumentasi lengkap
-
 ## Author
 
 **Devani** - Submission Membangun Sistem Machine Learning
 
 ---
-
-## Next Steps (Kriteria 2-4)
-
-1. **Kriteria 2**: Modelling dengan MLflow (lokal + DagsHub)
-2. **Kriteria 3**: MLflow Project + CI untuk re-training
-3. **Kriteria 4**: Serving + Monitoring dengan Prometheus & Grafana
